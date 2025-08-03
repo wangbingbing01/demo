@@ -1,0 +1,16 @@
+根据文档，wukong执行测试任务后，错误日志会自动生成在测试结果目录下。具体查看方法如下：
+
+日志文件路径：
+2022/9/22之后的DevEco Studio版本，日志路径为：/data/local/tmp/wukong/report/xxxxxxxx_xxxxxx/wukong.log
+2022/9/22之前的版本，路径为：/data/local/wukong/report/xxxxxxxx_xxxxxx/wukong.log
+查看方法：
+进入shell窗口，切换到报告目录，例如：
+
+可见wukong.log、wukong_report.csv等文件。
+
+使用hdc命令将日志拉取到本地查看，例如：
+
+日志内容说明：
+wukong.log记录了测试操作历程和异常信息。
+exception/目录下存放本次测试产生的异常文件。
+如需进一步分析日志内容，可直接用文本编辑器打开wukong.log文件。
