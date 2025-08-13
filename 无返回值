@@ -1,0 +1,430 @@
+基于对Hypium框架的分析，我来详细说明如何测试无返回值函数：
+
+## 无返回值函数的测试方法
+
+### 1. 无返回值函数的特点
+
+无返回值函数（通常返回`void`或`undefined`）的主要作用是：
+
+- __修改对象状态__：改变对象的属性值
+- __触发副作用__：如打印日志、发送网络请求、写入文件等
+- __调用其他函数__：触发其他方法的执行
+- __抛出异常__：在特定条件下抛出错误
+
+### 2. 测试策略和断言方法
+
+#### 2.1 验证状态变化
+
+```javascript
+describe('无返回值函数状态变化测试', function () {
+  let userManager;
+  
+  beforeEach(function() {
+    userManager = new UserManager();
+  });
+  
+  it('应该正确更新用户状态', function () {
+    // 准备测试数据
+    const user = { id: 1, name: 'John', status: 'inactive' };
+    userManager.addUser(user);
+    
+    // 执行无返回值函数
+    userManager.activateUser(1);
+    
+    // 验证状态变化
+    const updatedUser = userManager.getUser(1);
+    expect(updatedUser.status).assertEqual('active');
+  });
+  
+  it('应该正确删除用户', function () {
+    const user = { id: 1, name: 'John' };
+    userManager.addUser(user);
+    
+    // 执行删除操作（无返回值）
+    userManager.deleteUser(1);
+    
+    // 验证用户已被删除
+    const deletedUser = userManager.getUser(1);
+    expect(deletedUser).assertNull();
+  });
+});
+```
+
+#### 2.2 验证方法调用（使用Mock）
+
+```javascript
+describe('无返回值函数Mock验证', function () {
+  let notificationService;
+  let mockKit;
+  
+  beforeEach(function() {
+    mockKit = new MockKit();
+    notificationService = {
+      sendEmail: function(to, subject, content) {},
+      sendSMS: function(phone, message) {}
+    };
+  });
+  
+  it('应该正确发送邮件通知', function () {
+    // Mock函数
+    mockKit.mockFunc(notificationService, 'sendEmail');
+    
+    const userService = new UserService(notificationService);
+    
+    // 执行无返回值函数
+    userService.notifyUserByEmail(1, 'Welcome!');
+    
+    // 验证方法是否被正确调用
+    mockKit.verify(notificationService, 'sendEmail', [
+      'user@example.com', 
+      'Welcome!', 
+      'Welcome to our service'
+    ]).times(1);
+  });
+  
+  it('应该在用户注册时发送多种通知', function () {
+    mockKit.mockFunc(notificationService, 'sendEmail');
+    mockKit.mockFunc(notificationService, 'sendSMS');
+    
+    const userService = new UserService(notificationService);
+    
+    // 执行注册操作
+    userService.registerUser({
+      email: 'user@example.com',
+      phone: '1234567890'
+    });
+    
+    // 验证所有通知都被发送
+    mockKit.verify(notificationService, 'sendEmail').times(1);
+    mockKit.verify(notificationService, 'sendSMS').times(1);
+  });
+});
+```
+
+#### 2.3 验证异常抛出
+
+```javascript
+describe('无返回值函数异常测试', function () {
+  let fileService;
+  
+  beforeEach(function() {
+    fileService = new FileService();
+  });
+  
+  it('应该在文件不存在时抛出异常', function () {
+    // 验证抛出特定异常
+    expect(function() {
+      fileService.deleteFile('/nonexistent/file.txt');
+    }).assertThrowError('File not found');
+  });
+  
+  it('应该在权限不足时抛出异常', function () {
+    expect(function() {
+      fileService.deleteFile('/protected/file.txt');
+    }).assertThrowError('Permission denied');
+  });
+  
+  it('应该在参数无效时抛出异常', function () {
+    expect(function() {
+      fileService.deleteFile('');
+    }).assertThrowError('Invalid file path');
+    
+    expect(function() {
+      fileService.deleteFile(null);
+    }).assertThrowError('Invalid file path');
+  });
+});
+```
+
+#### 2.4 验证副作用（如日志、文件写入等）
+
+```javascript
+describe('无返回值函数副作用测试', function () {
+  let logger;
+  let consoleOutput;
+  
+  beforeEach(function() {
+    // 保存原始console.log
+    consoleOutput = [];
+    const originalLog = console.log;
+    
+    // Mock console.log来捕获输出
+    console.log = function(...args) {
+      consoleOutput.push(args.join(' '));
+      originalLog.apply(console, args);
+    };
+    
+    logger = new Logger();
+  });
+  
+  afterEach(function() {
+    // 恢复原始console.log
+    console.log = originalLog;
+  });
+  
+  it('应该正确输出日志信息', function () {
+    // 执行日志记录（无返回值）
+    logger.info('User logged in', { userId: 1, timestamp: Date.now() });
+    
+    // 验证日志输出
+    expect(consoleOutput.length).assertLarger(0);
+    expect(consoleOutput[0]).assertContain('User logged in');
+    expect(consoleOutput[0]).assertContain('userId: 1');
+  });
+  
+  it('应该在不同级别输出不同格式的日志', function () {
+    logger.debug('Debug message');
+    logger.info('Info message');
+    logger.warn('Warning message');
+    logger.error('Error message');
+    
+    // 验证不同级别的日志
+    expect(consoleOutput.length).assertEqual(4);
+    expect(consoleOutput[0]).assertContain('[DEBUG]');
+    expect(consoleOutput[1]).assertContain('[INFO]');
+    expect(consoleOutput[2]).assertContain('[WARN]');
+    expect(consoleOutput[3]).assertContain('[ERROR]');
+  });
+});
+```
+
+### 3. 异步无返回值函数测试
+
+#### 3.1 Promise-based异步函数
+
+```javascript
+describe('异步无返回值函数测试', function () {
+  let asyncService;
+  
+  beforeEach(function() {
+    asyncService = new AsyncService();
+  });
+  
+  it('应该正确异步更新数据', async function () {
+    const dataStore = new DataStore();
+    dataStore.setItem('key', 'old_value');
+    
+    // 执行异步无返回值函数
+    await asyncService.updateDataAsync('key', 'new_value');
+    
+    // 验证异步更新结果
+    const value = await dataStore.getItem('key');
+    expect(value).assertEqual('new_value');
+  });
+  
+  it('应该正确处理异步错误', async function () {
+    // 验证异步抛出异常
+    await expect(asyncService.invalidOperationAsync())
+      .assertPromiseIsRejectedWith('Invalid operation');
+  });
+});
+```
+
+#### 3.2 Callback-based异步函数
+
+```javascript
+describe('回调式无返回值函数测试', function () {
+  let callbackService;
+  
+  beforeEach(function() {
+    callbackService = new CallbackService();
+  });
+  
+  it('应该通过回调正确处理异步操作', function (done) {
+    let operationCompleted = false;
+    
+    // 执行回调式无返回值函数
+    callbackService.asyncOperation(function(error, result) {
+      expect(error).assertNull();
+      expect(result.success).assertTrue();
+      operationCompleted = true;
+      done(); // 标记测试完成
+    });
+    
+    // 验证操作是异步的
+    expect(operationCompleted).assertFalse();
+  });
+  
+  it('应该正确处理回调错误', function (done) {
+    callbackService.failingOperation(function(error, result) {
+      expect(error).assertNotNull();
+      expect(error.message).assertContain('Operation failed');
+      done();
+    });
+  });
+});
+```
+
+### 4. 复杂场景测试示例
+
+#### 4.1 事件发射器测试
+
+```javascript
+describe('事件发射器测试', function () {
+  let eventEmitter;
+  let receivedEvents;
+  
+  beforeEach(function() {
+    eventEmitter = new EventEmitter();
+    receivedEvents = [];
+    
+    // 注册事件监听器
+    eventEmitter.on('userCreated', function(user) {
+      receivedEvents.push({ type: 'userCreated', data: user });
+    });
+    
+    eventEmitter.on('userUpdated', function(user) {
+      receivedEvents.push({ type: 'userUpdated', data: user });
+    });
+  });
+  
+  it('应该正确发射用户创建事件', function () {
+    const user = { id: 1, name: 'John' };
+    
+    // 执行无返回值的事件发射
+    eventEmitter.emit('userCreated', user);
+    
+    // 验证事件被正确接收
+    expect(receivedEvents.length).assertEqual(1);
+    expect(receivedEvents[0].type).assertEqual('userCreated');
+    expect(receivedEvents[0].data).assertDeepEquals(user);
+  });
+  
+  it('应该按顺序发射多个事件', function () {
+    const user = { id: 1, name: 'John' };
+    
+    // 执行多个事件发射
+    eventEmitter.emit('userCreated', user);
+    eventEmitter.emit('userUpdated', { ...user, name: 'John Doe' });
+    
+    // 验证事件顺序和数据
+    expect(receivedEvents.length).assertEqual(2);
+    expect(receivedEvents[0].type).assertEqual('userCreated');
+    expect(receivedEvents[1].type).assertEqual('userUpdated');
+    expect(receivedEvents[1].data.name).assertEqual('John Doe');
+  });
+});
+```
+
+#### 4.2 数据库操作测试
+
+```javascript
+describe('数据库操作测试', function () {
+  let database;
+  let mockKit;
+  
+  beforeEach(function() {
+    mockKit = new MockKit();
+    database = {
+      execute: function(sql, params) {},
+      insert: function(table, data) {},
+      update: function(table, id, data) {},
+      delete: function(table, id) {}
+    };
+  });
+  
+  it('应该正确插入数据', function () {
+    mockKit.mockFunc(database, 'insert');
+    
+    const userService = new UserService(database);
+    
+    // 执行无返回值的数据库插入
+    userService.createUser({ name: 'John', email: 'john@example.com' });
+    
+    // 验证数据库操作被正确调用
+    mockKit.verify(database, 'insert', [
+      'users',
+      { name: 'John', email: 'john@example.com' }
+    ]).times(1);
+  });
+  
+  it('应该在事务中执行多个操作', function () {
+    mockKit.mockFunc(database, 'execute');
+    mockKit.mockFunc(database, 'insert');
+    mockKit.mockFunc(database, 'update');
+    
+    const userService = new UserService(database);
+    
+    // 执行事务操作
+    userService.transferUser(1, 2, 100);
+    
+    // 验证事务操作序列
+    mockKit.verify(database, 'execute', ['BEGIN TRANSACTION']).times(1);
+    mockKit.verify(database, 'update', ['accounts', 1, { amount: jasmine.any(Number) }]).times(1);
+    mockKit.verify(database, 'update', ['accounts', 2, { amount: jasmine.any(Number) }]).times(1);
+    mockKit.verify(database, 'execute', ['COMMIT']).times(1);
+  });
+});
+```
+
+### 5. 测试最佳实践
+
+#### 5.1 选择合适的验证方式
+
+```javascript
+describe('测试策略选择', function () {
+  // 1. 优先验证状态变化
+  it('应该优先验证状态变化', function () {
+    const counter = new Counter();
+    counter.increment(); // 无返回值
+    expect(counter.value).assertEqual(1);
+  });
+  
+  // 2. 无法验证状态时使用Mock
+  it('无法验证状态时使用Mock', function () {
+    const mockKit = new MockKit();
+    const externalService = { notify: function() {} };
+    mockKit.mockFunc(externalService, 'notify');
+    
+    const service = new Service(externalService);
+    service.performAction(); // 无返回值
+    
+    mockKit.verify(externalService, 'notify').times(1);
+  });
+  
+  // 3. 异常情况验证异常抛出
+  it('异常情况验证异常抛出', function () {
+    const validator = new Validator();
+    expect(function() {
+      validator.validate(null); // 无返回值，但可能抛异常
+    }).assertThrowError('Invalid input');
+  });
+});
+```
+
+#### 5.2 测试覆盖率考虑
+
+```javascript
+describe('测试覆盖率', function () {
+  it('应该覆盖正常流程', function () {
+    const service = new Service();
+    const result = service.getData(); // 虽然无返回值，但可能有副作用
+    // 验证副作用
+  });
+  
+  it('应该覆盖边界条件', function () {
+    const service = new Service();
+    service.processEmptyData(); // 无返回值
+    // 验证边界条件处理
+  });
+  
+  it('应该覆盖错误处理', function () {
+    const service = new Service();
+    expect(function() {
+      service.processInvalidData(); // 无返回值，但抛异常
+    }).assertThrowError();
+  });
+});
+```
+
+### 6. 总结
+
+测试无返回值函数的关键策略：
+
+1. __状态验证__：检查函数执行后对象或系统的状态变化
+2. __Mock验证__：验证函数是否正确调用了其他方法或服务
+3. __异常验证__：验证函数在错误条件下是否正确抛出异常
+4. __副作用验证__：验证函数产生的副作用（如日志、事件等）
+5. __异步验证__：对于异步函数，使用适当的异步测试模式
+
+选择哪种策略取决于函数的具体作用和可观测性。通常情况下，__状态验证是首选__，因为它最直接地反映了函数的实际效果。
