@@ -1,0 +1,154 @@
+根据我对ArkTS测试框架的分析，对于无返回值的函数，有几种主要的断言方式：
+
+## 1. 测试函数是否正常执行（不抛出异常）
+
+对于无返回值的函数，最基本的测试是验证它能正常执行而不抛出异常：
+
+```typescript
+import { describe, it, expect } from '@ohos/hypium';
+
+// 被测试的无返回值函数
+function voidFunction() {
+  // 一些操作，但没有返回值
+  console.log('This is a void function');
+}
+
+// 测试用例
+describe('VoidFunctionTest', () => {
+  it('should execute without throwing exception', () => {
+    // 方式1：直接调用，如果不抛出异常则测试通过
+    voidFunction();
+    
+    // 方式2：使用expect来验证函数调用
+    expect(voidFunction).not.toThrow();
+  });
+});
+```
+
+## 2. 测试函数是否抛出预期的异常
+
+如果无返回值函数在某些情况下应该抛出异常，可以使用toThrow断言：
+
+```typescript
+function functionThatThrows() {
+  throw new Error('Expected error');
+}
+
+function functionThatThrowsSpecificMessage() {
+  throw new Error('Specific error message');
+}
+
+describe('VoidFunctionExceptionTest', () => {
+  it('should throw an exception', () => {
+    // 测试是否抛出任何异常
+    expect(functionThatThrows).toThrow();
+  });
+  
+  it('should throw specific error message', () => {
+    // 测试是否抛出特定消息的异常
+    expect(functionThatThrowsSpecificMessage).toThrow('Specific error message');
+  });
+  
+  it('should throw specific error type', () => {
+    // 测试是否抛出特定类型的异常
+    expect(functionThatThrows).toThrowError('Error', 'Expected error');
+  });
+});
+```
+
+## 3. 通过副作用来验证函数行为
+
+对于无返回值的函数，通常通过验证其副作用来测试：
+
+```typescript
+class Calculator {
+  private result: number = 0;
+  
+  add(value: number): void {
+    this.result += value;
+  }
+  
+  getResult(): number {
+    return this.result;
+  }
+}
+
+describe('CalculatorTest', () => {
+  it('should add value correctly', () => {
+    const calc = new Calculator();
+    
+    // 调用无返回值的方法
+    calc.add(5);
+    
+    // 通过副作用验证结果
+    expect(calc.getResult()).assertEqual(5);
+  });
+});
+```
+
+## 4. 使用Mock对象验证函数调用
+
+如果需要验证函数是否被调用或调用的次数，可以使用Mock：
+
+```typescript
+interface Service {
+  doSomething(): void;
+}
+
+describe('MockTest', () => {
+  it('should verify function call', () => {
+    // 创建mock对象
+    const mockService: Service = {
+      doSomething: () => {}
+    };
+    
+    // 监控函数调用
+    spyOn(mockService, 'doSomething');
+    
+    // 调用被测试的函数
+    someFunctionThatUsesService(mockService);
+    
+    // 验证函数是否被调用
+    expect(mockService.doSomething).toHaveBeenCalled();
+  });
+});
+```
+
+## 5. 测试异步无返回值函数
+
+对于异步的无返回值函数：
+
+```typescript
+async function asyncVoidFunction(): Promise<void> {
+  // 异步操作
+  await new Promise(resolve => setTimeout(resolve, 100));
+}
+
+describe('AsyncVoidFunctionTest', () => {
+  it('should execute async function without error', async () => {
+    // 测试异步函数是否正常完成
+    await expect(asyncVoidFunction()).not.toThrow();
+  });
+  
+  it('should handle async function rejection', async () => {
+    async function failingAsyncFunction(): Promise<void> {
+      throw new Error('Async error');
+    }
+    
+    // 测试异步函数是否按预期拒绝
+    await expect(failingAsyncFunction()).rejects.toThrow('Async error');
+  });
+});
+```
+
+## 总结
+
+在ArkTS中为无返回值函数编写断言的主要策略：
+
+1. __验证正常执行__：确保函数不抛出异常
+2. __验证异常行为__：确保函数在适当情况下抛出预期异常
+3. __验证副作用__：通过函数对外部状态的影响来验证其行为
+4. __使用Mock__：验证函数调用情况和参数
+5. __异步处理__：对异步无返回值函数使用相应的异步断言
+
+这些方法涵盖了大多数无返回值函数的测试场景，您可以根据具体的函数行为选择合适的断言方式。
