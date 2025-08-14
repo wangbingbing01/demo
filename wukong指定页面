@@ -1,0 +1,445 @@
+基于我对wukong测试工具的深入分析，我现在可以为您制定一个详细的方案，说明如何在鸿蒙应用开发中使用wukong测试工具对指定页面进行压力测试。
+
+通过分析wukong测试工具的源代码和文档，我为您制定了针对指定页面进行压力测试的详细方案：
+
+## 方案概述
+
+wukong是OpenHarmony的稳定性测试自动化工具，可以通过模拟用户行为对指定页面进行压力测试。根据您的需求，我推荐以下几种测试方法：
+
+### 方法一：使用随机测试模式（推荐）
+
+__适用场景__：对指定应用的特定页面进行全面的随机压力测试
+
+__命令格式__：
+
+```bash
+# 显示启动方式
+wukong exec -b [bundlename] -a [abilityname] -U [uri] -c [次数] -i [间隔] -s [种子]
+
+# 隐式启动方式  
+wukong exec -b [bundlename] -U [uri] -x [uriType] -c [次数] -i [间隔] -s [种子]
+```
+
+__参数说明__：
+
+- `-b bundlename`：指定应用的包名
+- `-a abilityname`：指定要启动的Ability名称
+- `-U uri`：指定页面的URI
+- `-x uriType`：指定URI类型（隐式启动时使用）
+- `-c 次数`：设置测试执行次数
+- `-i 间隔`：设置事件注入间隔时间（毫秒）
+- `-s 种子`：设置随机种子，用于复现测试场景
+
+__示例__：
+
+```bash
+# 对设置应用的主页面进行1000次压力测试，间隔500ms
+wukong exec -b com.ohos.settings -a com.ohos.settings.MainAbility -c 1000 -i 500
+
+# 通过URI启动特定页面进行压力测试
+wukong exec -b com.example.app -U "pages/detail" -x "page" -c 500 -i 300
+```
+
+### 方法二：使用专项测试模式
+
+__适用场景__：针对特定操作类型进行专项压力测试
+
+__命令格式__：
+
+```bash
+# 控件顺序遍历测试
+wukong special -C [bundlename] -c [次数] -i [间隔] -p
+
+# 点击测试
+wukong special -t [x,y] -c [次数] -i [间隔]
+
+# 滑动测试
+wukong special -S -s [x1,y1] -e [x2,y2] -c [次数] -i [间隔] -b
+```
+
+__示例__：
+
+```bash
+# 对指定应用的所有控件进行顺序遍历压力测试
+wukong special -C com.example.app -c 100 -i 1000 -p
+
+# 对屏幕坐标(500,800)进行点击压力测试
+wukong special -t 500,800 -c 200 -i 500
+```
+
+### 方法三：使用专注测试模式
+
+__适用场景__：对特定类型的控件进行深度压力测试
+
+__命令格式__：
+
+```bash
+wukong focus -b [bundlename] -n [每个控件注入次数] -f [控件类型] -c [次数]
+```
+
+__示例__：
+
+```bash
+# 对按钮控件进行专注测试，每个按钮注入50次
+wukong focus -b com.example.app -n 50 -f "Button" -c 1000
+```
+
+## 关键技术实现原理
+
+### 1. 应用启动机制
+
+wukong通过`AppManager`类提供三种启动方式：
+
+- `StartAbilityByBundleInfo()`：通过包名和Ability名启动
+- `StartAbilityByUriAndType()`：通过URI和类型启动
+- `StartAbilityByAbilityAndUri()`：通过Ability名和URI启动
+
+### 2. 事件注入机制
+
+支持多种事件类型的随机注入：
+
+- 触摸事件（INPUTTYPE_TOUCHINPUT）
+- 滑动事件（INPUTTYPE_SWAPINPUT）
+- 键盘事件（INPUTTYPE_KEYBOARDINPUT）
+- 鼠标事件（INPUTTYPE_MOUSEINPUT）
+- 应用切换事件（INPUTTYPE_APPSWITCHINPUT）
+- 硬按键事件（INPUTTYPE_HARDKEYINPUT）
+
+### 3. 测试流程控制
+
+- `RandomTestFlow`：随机测试流程，支持事件比例配置
+- `SpecialTestFlow`：专项测试流程，支持特定操作模式
+- `FocusTestFlow`：专注测试流程，支持控件类型筛选
+
+## 实施步骤
+
+### 第一步：环境准备
+
+1. 确保wukong工具已安装在设备上
+2. 通过`hdc_std shell`连接设备
+3. 使用`wukong appinfo`查询目标应用的包名和Ability信息
+
+### 第二步：测试配置
+
+1. 确定测试目标页面的启动方式（显示/隐式）
+2. 设置合适的测试参数（次数、间隔、随机种子等）
+3. 根据需求选择测试模式（随机/专项/专注）
+
+### 第三步：执行测试
+
+1. 执行测试命令
+2. 监控测试过程和设备状态
+3. 记录测试过程中的异常情况
+
+### 第四步：结果分析
+
+1. 查看wukong生成的测试报告
+2. 分析崩溃日志和性能数据
+3. 根据测试结果优化应用代码
+
+## 高级配置建议
+
+### 1. 事件比例调优
+
+在随机测试中，可以通过以下参数调整各类事件的比例：
+
+```bash
+wukong exec -b com.example.app -t 0.6 -S 0.2 -C 0.2 -c 1000
+```
+
+- `-t`：触摸事件比例
+- `-S`：滑动事件比例
+- `-C`：控件事件比例
+
+### 2. 页面限制设置
+
+可以通过白名单/黑名单机制限制测试范围：
+
+```bash
+# 允许特定页面
+wukong exec -b com.example.app -e PageA,PageB -c 1000
+
+# 禁止特定页面
+wukong exec -b com.example.app -E SystemPage,SettingsPage -c 1000
+```
+
+### 3. 测试时间控制
+
+除了次数控制，还可以设置测试总时长：
+
+```bash
+# 持续测试30分钟
+wukong exec -b com.example.app -T 30
+```
+
+这个方案提供了从基础到高级的完整测试方法，您可以根据具体需求选择合适的测试策略。需要我详细解释某个特定部分吗？
+
+如何获取指定页面的URI
+
+**Checkpoint
+
+Compare
+
+Restore
+
+API Request$0.0000
+
+获取指定页面的URI是在鸿蒙应用开发中使用wukong进行压力测试的重要步骤。让我为您详细介绍几种获取页面URI的方法：
+
+## 方法一：通过应用源代码获取
+
+### 1. 查看config.json配置文件
+
+在鸿蒙应用的`config.json`文件中，可以找到页面路由配置：
+
+```json
+{
+  "module": {
+    "router": {
+      "page": "pages/index",
+      "pages": [
+        "pages/index",
+        "pages/detail",
+        "pages/settings"
+      ]
+    }
+  }
+}
+```
+
+__URI格式__：
+
+- 主页面：`pages/index`
+- 详情页：`pages/detail`
+- 设置页：`pages/settings`
+
+### 2. 查看Ability配置
+
+在`config.json`的abilities部分，可以找到Ability对应的页面：
+
+```json
+{
+  "module": {
+    "abilities": [
+      {
+        "name": "MainAbility",
+        "type": "page",
+        "launchType": "standard",
+        "uri": "pages/main"
+      }
+    ]
+  }
+}
+```
+
+### 3. 查看页面路由代码
+
+在应用源代码中查找页面路由定义：
+
+```javascript
+// router.js 或类似的路由配置文件
+export default {
+  routes: [
+    {
+      path: 'pages/home',
+      component: Home
+    },
+    {
+      path: 'pages/user/profile', 
+      component: UserProfile
+    },
+    {
+      path: 'pages/product/detail',
+      component: ProductDetail
+    }
+  ]
+}
+```
+
+## 方法二：通过系统工具获取
+
+### 1. 使用aapt工具（Android Asset Packaging Tool）
+
+```bash
+# 获取应用清单信息
+aapt dump xmltree <app.apk> AndroidManifest.xml
+
+# 或者使用hdc工具
+hdc_std shell dumpsys window windows | grep -E "mCurrentFocus|mFocusedApp"
+```
+
+### 2. 使用鸿蒙开发工具
+
+- 在DevEco Studio中查看应用结构
+- 使用应用信息查看器获取页面路由
+
+### 3. 使用wukong的appinfo命令
+
+```bash
+# 查看所有已安装应用的信息
+wukong appinfo
+
+# 输出示例：
+# BundleName: com.example.app
+# MainAbility: com.example.app.MainAbility
+# URI: pages/main
+```
+
+## 方法三：通过运行时获取
+
+### 1. 使用日志分析
+
+```bash
+# 监控应用启动日志
+hdc_std shell logcat | grep -E "router|navigation|page"
+
+# 或者使用鸿蒙日志系统
+hdc_std shell hilog | grep -i "page"
+```
+
+### 2. 使用dumpsys命令
+
+```bash
+# 获取当前窗口信息
+hdc_std shell dumpsys window windows
+
+# 获取任务栈信息
+hdc_std shell dumpsys activity activities
+```
+
+### 3. 使用wukong的测试模式
+
+```bash
+# 先运行一次随机测试，观察日志输出
+wukong exec -b com.example.app -c 5
+
+# 在日志中查找页面URI信息
+hdc_std shell hilog | grep -E "URI|page|ability"
+```
+
+## 方法四：通过应用开发者获取
+
+### 1. 查询应用文档
+
+- 查看应用的技术文档
+- 联系应用开发团队获取页面路由信息
+
+### 2. 使用开发者选项
+
+- 如果是自有应用，直接查看源代码
+- 使用DevEco Studio的页面路由分析工具
+
+## 常见URI格式示例
+
+### 1. 标准页面URI
+
+```javascript
+pages/index
+pages/main
+pages/home
+pages/detail
+pages/settings
+```
+
+### 2. 带参数的URI
+
+```javascript
+pages/detail?id=123
+pages/user/profile?uid=456
+pages/product/info?pid=789
+```
+
+### 3. 特殊页面URI
+
+```javascript
+# 系统设置页面
+settings/system/display
+settings/system/network
+
+# 应用内页面
+com.example.app/pages/main
+com.example.app/pages/user/login
+```
+
+## 验证URI的方法
+
+### 1. 使用wukong测试验证
+
+```bash
+# 测试URI是否有效
+wukong exec -b com.example.app -U "pages/detail" -c 3
+
+# 如果URI有效，wukong会成功启动相应页面
+```
+
+### 2. 使用am命令验证（如果支持）
+
+```bash
+# 尝试通过URI启动页面
+hdc_std shell am start -a android.intent.action.VIEW -d "pages/detail" com.example.app
+```
+
+### 3. 观察应用行为
+
+- 检查页面是否正确加载
+- 观察是否有错误日志输出
+- 确认页面功能是否正常
+
+## 实际操作步骤
+
+### 步骤1：确定目标应用
+
+```bash
+# 查看已安装应用列表
+hdc_std shell pm list packages
+
+# 或者使用wukong
+wukong appinfo
+```
+
+### 步骤2：获取应用基本信息
+
+```bash
+# 获取应用详细信息
+hdc_std shell dumpsys package com.example.app
+```
+
+### 步骤3：尝试常见URI模式
+
+```bash
+# 测试常见页面URI
+wukong exec -b com.example.app -U "pages/main" -c 1
+wukong exec -b com.example.app -U "pages/index" -c 1
+wukong exec -b com.example.app -U "pages/home" -c 1
+```
+
+### 步骤4：分析测试结果
+
+- 观察wukong日志输出
+- 检查页面是否成功启动
+- 记录有效的URI
+
+## 注意事项
+
+### 1. URI格式规范
+
+- 鸿蒙系统的URI通常以`pages/`开头
+- URI区分大小写
+- 某些应用可能使用自定义URI格式
+
+### 2. 权限问题
+
+- 确保wukong有足够权限启动目标页面
+- 某些系统页面可能需要特殊权限
+
+### 3. 应用兼容性
+
+- 不同版本的鸿蒙系统可能有不同的URI格式
+- 某些应用可能使用非标准URI格式
+
+### 4. 错误处理
+
+- 如果URI无效，wukong会输出错误信息
+- 需要根据错误信息调整URI格式
+
+通过以上方法，您应该能够准确获取目标页面的URI，并使用wukong进行有效的压力测试。建议从方法一开始，逐步尝试各种方法，直到找到正确的URI格式。
