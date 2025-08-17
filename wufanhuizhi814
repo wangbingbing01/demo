@@ -25,7 +25,7 @@ describe('VoidFunctionTest', () => {
 });
 ```
 
-## 2. 测试函数是否抛出预期的异常
+## 2. 测试函数是否抛出预期的异常----checked ok
 
 如果无返回值函数在某些情况下应该抛出异常，可以使用toThrow断言：
 
@@ -41,18 +41,14 @@ function functionThatThrowsSpecificMessage() {
 describe('VoidFunctionExceptionTest', () => {
   it('should throw an exception', () => {
     // 测试是否抛出任何异常
-    expect(functionThatThrows).toThrow();
+    expect(functionThatThrows).assertThrowError('Expected error');
   });
   
   it('should throw specific error message', () => {
     // 测试是否抛出特定消息的异常
-    expect(functionThatThrowsSpecificMessage).toThrow('Specific error message');
+    expect(functionThatThrowsSpecificMessage).assertThrowError('Specific error message');
   });
   
-  it('should throw specific error type', () => {
-    // 测试是否抛出特定类型的异常
-    expect(functionThatThrows).toThrowError('Error', 'Expected error');
-  });
 });
 ```
 
@@ -86,7 +82,7 @@ describe('CalculatorTest', () => {
 });
 ```
 
-## 4. 使用Mock对象验证函数调用
+## 4. 使用Mock对象验证函数调用----?
 
 如果需要验证函数是否被调用或调用的次数，可以使用Mock：
 
