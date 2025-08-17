@@ -56,7 +56,7 @@ describe('VoidFunctionExceptionTest', () => {
 });
 ```
 
-## 3. 通过副作用来验证函数行为
+## 3. 通过副作用来验证函数行为----checked ok
 
 对于无返回值的函数，通常通过验证其副作用来测试：
 
