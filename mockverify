@@ -1,0 +1,56 @@
+import { describe, it, expect, MockKit, when, ArgumentMatchers } from '@ohos/hypium';
+import { bluetoothManager } from '@kit.MDMKit';
+
+const mocker = new MockKit();
+
+class Person {
+  age: number;
+  constructor(age: number) {
+    this.age = age;
+  }
+  getAge(): number {
+    return this.age;
+  }
+}
+
+interface List {
+  add(item: Person): void;
+}
+class ListImpl implements List {
+  add(item: Person): void {
+    // 空实现
+  }
+}
+
+const list = new ListImpl();//真正要测试的类
+
+const mockAdd = mocker.mockFunc(list, list.add);//mock该object的某个方法
+
+export default function mock_system_api(): void {
+  describe('mock_system_api', () => {
+    /* mock系统API */
+    it('mock_system_api', 0, () => {
+      // let bluetoothInfo = bluetoothManager.getBluetoothInfo({
+      //   bundleName: "com.example.myapplication"
+      // })
+      // expect(bluetoothInfo.state).assertEqual(4)
+      let matchedCount = 0;
+      when(mockAdd)(ArgumentMatchers.any).afterAction((arg: Person) => {
+        const age = (typeof arg.getAge === 'function') ? arg.getAge() : arg.age;
+        if (typeof age === 'number' && age < 20) {
+          matchedCount++;
+        }
+      });
+      // 被测代码调用
+      list.add(new Person(18));
+      list.add(new Person(25));
+      list.add(new Person(17));
+
+      // 断言
+      expect(matchedCount).assertLessOrEqual(2);
+    });
+  });
+}
+//鸿蒙单元测试中的mocker.verify()方法本身没有自带“参数匹配器”的语法糖，
+// mocker.verify 通常用于验证被 mock 的方法是否被调用，以及调用的次数、参数等。verify` 签名与行为：`mocker.verify(methodName, argsArray)`，返回 `VerificationMode` 实例。
+//在鸿蒙Hypium框架中，mocker.verify()只支持“全等”比较，做不到Java-mockitod argThat。可以通过先执行所有调用，通过afterAction，使用变量记录满足条件的结果，最后通过断言进行判断。
