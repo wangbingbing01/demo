@@ -1,0 +1,48 @@
+Step('设置回家路线')
+        # 点击设置
+        self.driver.touch(BY.key('app_home_tab_search_home_setting'))
+        self.driver.wait(0.5)
+        # 搜索地点
+        self.driver.touch(BY.key('mapview'))
+        self.driver.wait(0.5)
+        self.driver.input_text(BY.type("TextInput"), "南京南站")
+        self.driver.touch(BY.key('app_search_main_search_result_item_1_name_text'))
+        self.driver.wait(0.5)
+        # 切换查看路线
+        self.driver.touch(BY.isAfter(BY.key('tab_bar_routes_go_action')).isBefore(BY.key('tab_bar_me_action')).text('路线').type('Text'))
+        self.driver.wait(0.5)
+        home_name_address = self.driver.find_component(BY.key('direction_main_home_name_address')).getText()
+        host.check_not_equal(home_name_address, '点击设置')
+
+        Step('收藏')
+        # 发现，搜索地点进行收藏
+        self.driver.touch(BY.text('搜地点、公交、地铁、城市'))
+        self.driver.wait(0.5)
+        self.driver.input_text(BY.type("TextInput"), "南京南站")
+        self.driver.wait(0.5)
+        # 选择第一个搜索结果
+        self.driver.touch(BY.key('app_search_main_search_result_item_0_name_text'))
+        self.driver.wait(0.5)
+        # 开启监听
+        self.driver.start_listen_toast()
+        self.driver.wait(0.5)
+        # 点击收藏按钮
+        self.driver.touch(BY.key('app_search_PoiPage_collect_poi_button'))
+        # -----------------------返回上次开启监听后最新的一条toast消息，如果没有消息则等待最多5秒直到新toast出现, 返回该toast的文本
+        # ---------------------------没能获取到toast
+        text_in_toast = self.driver.get_latest_toast(timeout=5)
+        print(text_in_toast)
+        host.check_starts_with(text_in_toast, "已添加至")
+        # 关闭当前页面，进入我的页面检查是否收藏成功
+        self.driver.touch(BY.key('app_search_PoiPage_close_button'))
+        self.driver.wait(0.5)
+        self.driver.touch(BY.key('app_search_main_back_button'))
+        self.driver.wait(0.5)
+        # 进入我的页面
+        self.driver.touch(BY.type('Text').text('我的'))
+        self.driver.wait(0.5)
+        # 进入收藏页面
+        self.driver.touch(BY.key('app_home_tab_mine_collection_title'))
+        self.driver.wait(0.5)
+        component = self.driver.find_component(BY.text('南京南站')).getText()
+        host.check_equal(component, '南京南站')
