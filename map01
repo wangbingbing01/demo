@@ -46,3 +46,62 @@ Step('设置回家路线')
         self.driver.wait(0.5)
         component = self.driver.find_component(BY.text('南京南站')).getText()
         host.check_equal(component, '南京南站')
+\
+
+
+ # 刷新路线
+        Step('刷新路线对比')
+        # pip install opencv-contrib-python  自带 img_hash
+        self.driver.capture_screen('./resource/images/img_before_refersh.jpeg')
+        # 在屏幕左边区域向下滑动， 距离30
+        self.driver.swipe(UiParam.DOWN, 30, side=UiParam.LEFT)
+        self.driver.wait(0.5)
+        # 在类型为XComponent的控件上进行双指捏合缩小操作, 设置水平方向捏合
+        self.driver.pinch_in(BY.type('XComponent'), scale=0.2, direction="horizontal")
+        self.driver.wait(0.5)
+        # 刷新
+        self.driver.touch(BY.isAfter(BY.key('direction_routes_result_ic_refresh')).isBefore(
+            BY.key('direction_routes_result_ic_position')).type('SymbolGlyph'))
+        self.driver.wait(5)
+        # 刷新后再次截图
+        self.driver.capture_screen('./resource/images/img_after_refersh.jpeg')
+        self.driver.wait(1)
+
+        img0 = cv2.imread('./resource/images/img_before_refersh.jpeg')
+        img1 = cv2.imread('./resource/images/img_after_refersh.jpeg')
+        host.check_equal(alike_phash(img0, img1), "alike")
+
+        Step('选择最后一个路线方案')
+        components = self.driver.find_all_components(BY.key('^direction_routes_result_route_result_\\d$', MatchPattern.REGEXP))
+        print('components: ', components)
+        self.driver.touch(components[-1])
+
+
+utils文件
+from hypium import UiDriver
+import cv2
+
+
+def get_app_version_code(driver: UiDriver, bundle: str) -> int:
+    info = driver.shell('bm dump -n {} |grep versionCode'.format(bundle))
+    if 'versionCode' not in info:
+        return 0
+    token = info.splitlines()[-1]
+    code_str = token.replace('"versionCode":', '').replace(',', '').strip()
+    return int(code_str)
+
+
+# def alike_phash(im1, im2, thr=5):
+#     phash = cv2.img_hash.pHash
+#     h1, h2 = phash(im1), phash(im2)
+#     # 汉明距离 ≤ 5 几乎一模一样；≤ 10 轻微差异；> 10 明显不同。
+#     return cv2.norm(h1, h2, cv2.NORM_HAMMING) <= thr
+
+def alike_phash(im1, im2):
+    phash = cv2.img_hash.pHash
+    h1, h2 = phash(im1), phash(im2)
+    # 汉明距离 ≤ 5 几乎一模一样；≤ 10 轻微差异；> 10 明显不同。
+    if cv2.norm(h1, h2, cv2.NORM_HAMMING) <= 5:
+        return "alike"
+    else:
+        return "different"
